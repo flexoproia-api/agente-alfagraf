@@ -3,11 +3,10 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from datetime import datetime
 import os
 
-# ─── TABELA DE PREÇOS POR M² ────────────────────────────────────────────────
 PRECOS_M2 = {
     1:  {"Vinil": 120,  "BOPP Branco": 140, "BOPP Metalizado": 150, "BOPP Transparente": 150},
     2:  {"Vinil": 77,   "BOPP Branco": 100, "BOPP Metalizado": 120, "BOPP Transparente": 120},
@@ -29,16 +28,15 @@ AZUL_CLARO    = colors.HexColor("#e8eaf6")
 CINZA_LINHA   = colors.HexColor("#eeeeee")
 
 def calcular_preco_m2(material, metros2):
-    """Busca o preço por m² para o volume informado (arredonda para cima)."""
-    m2_int = min(10, max(1, int(-(-metros2 // 1))))  # ceil
+    import math
+    m2_int = min(10, max(1, math.ceil(metros2)))
     tabela = PRECOS_M2.get(m2_int)
     if not tabela:
         return None
     return tabela.get(material)
 
 def calcular_item(material, largura_mm, altura_mm, quantidade):
-    """Calcula o valor total de um item."""
-    area_unitaria = (largura_mm / 1000) * (altura_mm / 1000)  # m²
+    area_unitaria = (largura_mm / 1000) * (altura_mm / 1000)
     area_total    = area_unitaria * quantidade
     preco_m2      = calcular_preco_m2(material, area_total)
     if preco_m2 is None:
@@ -46,21 +44,6 @@ def calcular_item(material, largura_mm, altura_mm, quantidade):
     return round(area_total * preco_m2, 2), round(area_total, 4), preco_m2
 
 def gerar_pdf(dados, caminho_saida):
-    """
-    dados = {
-        "cliente":   "João Silva",
-        "empresa":   "Empresa XYZ",   # pode ser None para PF
-        "cidade":    "São Paulo",
-        "estado":    "SP",
-        "telefone":  "11999999999",
-        "itens": [
-            {"descricao": "Etiqueta BOPP Branco", "material": "BOPP Branco",
-             "largura_mm": 100, "altura_mm": 50, "quantidade": 500, "impressao": "Colorida"},
-            ...
-        ]
-    }
-    """
-
     doc = SimpleDocTemplate(
         caminho_saida,
         pagesize=A4,
@@ -70,67 +53,50 @@ def gerar_pdf(dados, caminho_saida):
 
     styles = getSampleStyleSheet()
 
-    estilo_titulo = ParagraphStyle("titulo",
-        fontSize=18, textColor=AZUL_ALFAGRAF,
+    estilo_titulo = ParagraphStyle("titulo", fontSize=18, textColor=AZUL_ALFAGRAF,
         fontName="Helvetica-Bold", spaceAfter=2)
-
-    estilo_subtitulo = ParagraphStyle("sub",
-        fontSize=9, textColor=colors.HexColor("#555555"),
-        fontName="Helvetica", spaceAfter=1)
-
-    estilo_secao = ParagraphStyle("secao",
-        fontSize=10, textColor=AZUL_ALFAGRAF,
+    h1 = ParagraphStyle("h1", fontSize=10, textColor=AZUL_ALFAGRAF,
         fontName="Helvetica-Bold", spaceBefore=6, spaceAfter=4)
-
-    estilo_normal = ParagraphStyle("normal",
-        fontSize=9, textColor=colors.black,
+    normal = ParagraphStyle("normal", fontSize=9, textColor=colors.black,
         fontName="Helvetica", spaceAfter=2)
-
-    estilo_obs = ParagraphStyle("obs",
-        fontSize=8, textColor=colors.HexColor("#777777"),
+    obs = ParagraphStyle("obs", fontSize=8, textColor=colors.HexColor("#777777"),
         fontName="Helvetica-Oblique")
-
-    estilo_rodape = ParagraphStyle("rodape",
-        fontSize=7.5, textColor=colors.HexColor("#888888"),
+    celula = ParagraphStyle("celula", fontSize=8, textColor=colors.black,
+        fontName="Helvetica", leading=11)
+    rodape = ParagraphStyle("rodape", fontSize=7.5, textColor=colors.HexColor("#888888"),
         fontName="Helvetica", alignment=TA_CENTER)
 
     story = []
 
-    # ── CABEÇALHO ──────────────────────────────────────────────────────────
-    logo_path = os.path.join(os.path.dirname(__file__), "logo_alfagraf.png")
+    # CABEÇALHO
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_alfagraf.png")
     logo = Image(logo_path, width=45*mm, height=18*mm)
-
     numero_orcamento = datetime.now().strftime("%Y%m%d%H%M")
     data_formatada   = datetime.now().strftime("%d/%m/%Y")
 
-    cabecalho_dados = [
-        [logo,
-         Paragraph(f"<b>ORÇAMENTO Nº {numero_orcamento}</b>", estilo_titulo),
-         Paragraph(f"Data: {data_formatada}", estilo_normal)]
-    ]
+    cabecalho_dados = [[logo,
+        Paragraph(f"<b>ORÇAMENTO Nº {numero_orcamento}</b>", estilo_titulo),
+        Paragraph(f"Data: {data_formatada}", normal)]]
     tabela_cab = Table(cabecalho_dados, colWidths=[50*mm, 100*mm, 35*mm])
     tabela_cab.setStyle(TableStyle([
-        ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
-        ("ALIGN",       (1,0), (1,0),   "LEFT"),
-        ("ALIGN",       (2,0), (2,0),   "RIGHT"),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 6),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("ALIGN",  (2,0), (2,0),  "RIGHT"),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
     ]))
     story.append(tabela_cab)
     story.append(HRFlowable(width="100%", thickness=2, color=AZUL_ALFAGRAF, spaceAfter=6))
 
-    # ── DADOS DO CLIENTE ───────────────────────────────────────────────────
-    story.append(Paragraph("DADOS DO CLIENTE", estilo_secao))
-
+    # DADOS DO CLIENTE
+    story.append(Paragraph("DADOS DO CLIENTE", h1))
     empresa_linha = f"<b>Empresa:</b> {dados['empresa']}" if dados.get("empresa") else "<b>Pessoa Física</b>"
     info_cliente = [
-        [Paragraph(f"<b>Cliente:</b> {dados['cliente']}", estilo_normal),
-         Paragraph(empresa_linha, estilo_normal)],
-        [Paragraph(f"<b>Cidade/UF:</b> {dados['cidade']} / {dados['estado']}", estilo_normal),
-         Paragraph(f"<b>Telefone:</b> {dados['telefone']}", estilo_normal)],
+        [Paragraph(f"<b>Cliente:</b> {dados['cliente']}", normal),
+         Paragraph(empresa_linha, normal)],
+        [Paragraph(f"<b>Cidade/UF:</b> {dados['cidade']} / {dados['estado']}", normal),
+         Paragraph(f"<b>Telefone:</b> {dados['telefone']}", normal)],
     ]
     tab_cliente = Table(info_cliente, colWidths=[93*mm, 93*mm])
     tab_cliente.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,-1), AZUL_CLARO),
         ("ROWBACKGROUNDS", (0,0), (-1,-1), [AZUL_CLARO, colors.white]),
         ("GRID",       (0,0), (-1,-1), 0.3, colors.HexColor("#cccccc")),
         ("TOPPADDING", (0,0), (-1,-1), 4),
@@ -140,75 +106,65 @@ def gerar_pdf(dados, caminho_saida):
     story.append(tab_cliente)
     story.append(Spacer(1, 6*mm))
 
-    # ── ITENS DO ORÇAMENTO ─────────────────────────────────────────────────
-    story.append(Paragraph("ITENS DO ORÇAMENTO", estilo_secao))
+    # ITENS
+    story.append(Paragraph("ITENS DO ORÇAMENTO", h1))
 
-    cabecalho_itens = ["#", "Descrição", "Material", "Tamanho", "Qtd", "Impressão", "Área (m²)", "R$/m²", "Total (R$)"]
+    cabecalho_itens = ["#", "Descrição", "Material", "Tamanho", "Qtd", "Total (R$)"]
     linhas = [cabecalho_itens]
 
-    subtotal      = 0.0
-    itens_humano  = []
-    total_area    = 0.0
+    subtotal     = 0.0
+    itens_humano = []
 
     for i, item in enumerate(dados["itens"], 1):
         material = item.get("material", "")
         mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "BOPP Transparente"]
 
         if material in mat_auto:
-            resultado = calcular_item(
-                material,
-                item["largura_mm"],
-                item["altura_mm"],
-                item["quantidade"]
-            )
+            resultado = calcular_item(material, item["largura_mm"], item["altura_mm"], item["quantidade"])
             if resultado:
                 valor_total, area_total, preco_m2 = resultado
-                total_area += area_total
-                subtotal   += valor_total
+                subtotal += valor_total
                 linhas.append([
                     str(i),
-                    item.get("descricao", material),
-                    material,
+                    Paragraph(item.get("descricao", material), celula),
+                    Paragraph(material, celula),
                     f"{item['largura_mm']}x{item['altura_mm']} mm",
                     str(item["quantidade"]),
-                    item.get("impressao", "Colorida"),
-                    f"{area_total:.4f}",
-                    f"R$ {preco_m2:.2f}",
                     f"R$ {valor_total:.2f}",
                 ])
             else:
                 itens_humano.append(i)
-                linhas.append([str(i), item.get("descricao", material), material,
+                linhas.append([str(i), Paragraph(item.get("descricao", material), celula),
+                    Paragraph(material, celula),
                     f"{item['largura_mm']}x{item['altura_mm']} mm",
-                    str(item["quantidade"]), item.get("impressao",""), "-", "-", "A consultar"])
+                    str(item["quantidade"]), "A consultar"])
         else:
             itens_humano.append(i)
-            linhas.append([str(i), item.get("descricao", material), material,
+            linhas.append([str(i), Paragraph(item.get("descricao", material), celula),
+                Paragraph(material, celula),
                 f"{item.get('largura_mm','-')}x{item.get('altura_mm','-')} mm",
-                str(item.get("quantidade","-")), item.get("impressao",""), "-", "-", "A consultar"])
+                str(item.get("quantidade","-")), "A consultar"])
 
-    col_widths = [8*mm, 35*mm, 28*mm, 22*mm, 12*mm, 18*mm, 16*mm, 16*mm, 21*mm]
+    col_widths = [8*mm, 58*mm, 35*mm, 28*mm, 14*mm, 33*mm]
     tab_itens = Table(linhas, colWidths=col_widths, repeatRows=1)
     tab_itens.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),  (-1,0),  AZUL_ALFAGRAF),
-        ("TEXTCOLOR",     (0,0),  (-1,0),  colors.white),
-        ("FONTNAME",      (0,0),  (-1,0),  "Helvetica-Bold"),
-        ("FONTSIZE",      (0,0),  (-1,-1), 8),
-        ("ROWBACKGROUNDS",(0,1),  (-1,-1), [colors.white, CINZA_LINHA]),
-        ("GRID",          (0,0),  (-1,-1), 0.3, colors.HexColor("#cccccc")),
-        ("ALIGN",         (4,0),  (-1,-1), "CENTER"),
-        ("ALIGN",         (6,0),  (-1,-1), "RIGHT"),
-        ("ALIGN",         (7,0),  (-1,-1), "RIGHT"),
-        ("ALIGN",         (8,0),  (-1,-1), "RIGHT"),
-        ("VALIGN",        (0,0),  (-1,-1), "MIDDLE"),
-        ("TOPPADDING",    (0,0),  (-1,-1), 4),
-        ("BOTTOMPADDING", (0,0),  (-1,-1), 4),
-        ("LEFTPADDING",   (0,0),  (-1,-1), 4),
+        ("BACKGROUND",    (0,0), (-1,0),  AZUL_ALFAGRAF),
+        ("TEXTCOLOR",     (0,0), (-1,0),  colors.white),
+        ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0), (-1,-1), 8),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [colors.white, CINZA_LINHA]),
+        ("GRID",          (0,0), (-1,-1), 0.3, colors.HexColor("#cccccc")),
+        ("ALIGN",         (4,0), (4,-1),  "CENTER"),
+        ("ALIGN",         (5,0), (5,-1),  "RIGHT"),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("TOPPADDING",    (0,0), (-1,-1), 4),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
     ]))
     story.append(tab_itens)
     story.append(Spacer(1, 4*mm))
 
-    # ── TOTAIS ─────────────────────────────────────────────────────────────
+    # TOTAIS
     estado = dados.get("estado", "").upper()
     frete  = VALOR_FRETE if estado in ESTADOS_FRETE_FIXO else None
     total  = subtotal + (frete or 0)
@@ -226,24 +182,23 @@ def gerar_pdf(dados, caminho_saida):
     if linhas_totais:
         tab_totais = Table(linhas_totais, colWidths=[118*mm, 40*mm, 28*mm])
         estilo_totais = [
-            ("ALIGN",   (1,0),  (-1,-1), "RIGHT"),
-            ("FONTSIZE",(0,0),  (-1,-1), 9),
-            ("TOPPADDING",(0,0),(-1,-1), 3),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+            ("ALIGN",   (1,0), (-1,-1), "RIGHT"),
+            ("FONTSIZE",(0,0), (-1,-1), 9),
+            ("TOPPADDING",    (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 3),
         ]
-        # última linha em negrito
         ultima = len(linhas_totais) - 1
         if subtotal > 0:
             estilo_totais += [
-                ("FONTNAME",   (1,ultima),(-1,ultima), "Helvetica-Bold"),
-                ("TEXTCOLOR",  (1,ultima),(-1,ultima), AZUL_ALFAGRAF),
-                ("FONTSIZE",   (1,ultima),(-1,ultima), 10),
-                ("LINEABOVE",  (1,ultima),(-1,ultima), 1, AZUL_ALFAGRAF),
+                ("FONTNAME",  (1,ultima), (-1,ultima), "Helvetica-Bold"),
+                ("TEXTCOLOR", (1,ultima), (-1,ultima), AZUL_ALFAGRAF),
+                ("FONTSIZE",  (1,ultima), (-1,ultima), 10),
+                ("LINEABOVE", (1,ultima), (-1,ultima), 1, AZUL_ALFAGRAF),
             ]
         tab_totais.setStyle(TableStyle(estilo_totais))
         story.append(tab_totais)
 
-    # ── OBSERVAÇÕES ────────────────────────────────────────────────────────
+    # OBSERVAÇÕES
     story.append(Spacer(1, 4*mm))
     obs_linhas = [
         "• Orçamento válido por 7 dias.",
@@ -257,55 +212,27 @@ def gerar_pdf(dados, caminho_saida):
     if frete is None and estado:
         obs_linhas.append("• Frete para o seu estado será calculado pela equipe comercial.")
 
-    for obs in obs_linhas:
-        story.append(Paragraph(obs, estilo_obs))
+    for o in obs_linhas:
+        story.append(Paragraph(o, obs))
 
     story.append(Spacer(1, 6*mm))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc"), spaceAfter=4))
-
-    # ── RODAPÉ ─────────────────────────────────────────────────────────────
     story.append(Paragraph(
         "Alfagraf — R. Dep. João Ribeiro Júnior, 220 - Cidade Industrial de Curitiba, Curitiba - PR, 81350-220  |  (41) 3014-4002  |  comercial@alfagraf.com.br",
-        estilo_rodape
-    ))
+        rodape))
 
     doc.build(story)
-    print(f"PDF gerado: {caminho_saida}")
 
-
-# ── TESTE ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     dados_teste = {
-        "cliente":  "Carlos Mendes",
-        "empresa":  "Distribuidora Mendes Ltda",
-        "cidade":   "Curitiba",
-        "estado":   "PR",
-        "telefone": "41998887766",
+        "cliente": "Carlos Mendes", "empresa": "Distribuidora Mendes Ltda",
+        "cidade": "Curitiba", "estado": "PR", "telefone": "41998887766",
         "itens": [
-            {
-                "descricao": "Etiqueta BOPP Branco",
-                "material":  "BOPP Branco",
-                "largura_mm": 100,
-                "altura_mm":  50,
-                "quantidade": 500,
-                "impressao":  "Colorida"
-            },
-            {
-                "descricao": "Adesivo Vinil externo",
-                "material":  "Vinil",
-                "largura_mm": 200,
-                "altura_mm":  150,
-                "quantidade": 200,
-                "impressao":  "Colorida"
-            },
-            {
-                "descricao": "Etiqueta BOPP Metalizado",
-                "material":  "BOPP Metalizado",
-                "largura_mm": 80,
-                "altura_mm":  40,
-                "quantidade": 1000,
-                "impressao":  "1 cor"
-            },
+            {"descricao": "Etiqueta BOPP Branco para rotulagem de produtos alimentícios",
+             "material": "BOPP Branco", "largura_mm": 100, "altura_mm": 50, "quantidade": 500},
+            {"descricao": "Adesivo Vinil externo",
+             "material": "Vinil", "largura_mm": 200, "altura_mm": 150, "quantidade": 200},
         ]
     }
     gerar_pdf(dados_teste, "/mnt/user-data/outputs/orcamento_teste_alfagraf.pdf")
+    print("OK")
