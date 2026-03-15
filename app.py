@@ -10,20 +10,18 @@ PHONE_NUMBER_ID = "959137950626170"
 def gerar():
     dados = request.get_json()
     if not dados:
-        return jsonify({"erro": "Dados inválidos"}), 400
+        return jsonify({"erro": "Dados invalidos"}), 400
 
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     if not token:
-        return jsonify({"erro": "Token não informado"}), 401
+        return jsonify({"erro": "Token nao informado"}), 401
 
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
         caminho = tmp.name
 
     try:
-        # 1 — Gerar o PDF
         gerar_pdf(dados, caminho)
 
-        # 2 — Upload para os servidores da Meta
         upload_url = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/media"
         with open(caminho, 'rb') as f:
             upload_resp = requests.post(
@@ -34,7 +32,7 @@ def gerar():
             )
 
         if upload_resp.status_code != 200:
-            return jsonify({"erro": "Falha no upload para Meta", "detalhe": upload_resp.text}), 500
+            return jsonify({"erro": "Falha no upload", "detalhe": upload_resp.text}), 500
 
         media_id = upload_resp.json().get("id")
         return jsonify({"sucesso": True, "media_id": media_id})
@@ -51,4 +49,3 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-```
