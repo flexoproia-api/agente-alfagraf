@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from gerar_orcamento import gerar_pdf
-import os, tempfile, requests
+import os, tempfile, uuid
 
 app = Flask(__name__)
 
-PHONE_NUMBER_ID = "959137950626170"
+PDF_DIR = "/tmp/pdfs"
+os.makedirs(PDF_DIR, exist_ok=True)
 
 @app.route("/gerar-orcamento", methods=["POST"])
 def gerar():
@@ -12,36 +13,24 @@ def gerar():
     if not dados:
         return jsonify({"erro": "Dados invalidos"}), 400
 
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    if not token:
-        return jsonify({"erro": "Token nao informado"}), 401
-
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-        caminho = tmp.name
+    nome = f"orcamento_{uuid.uuid4().hex[:8]}.pdf"
+    caminho = os.path.join(PDF_DIR, nome)
 
     try:
         gerar_pdf(dados, caminho)
-
-        upload_url = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/media"
-        with open(caminho, 'rb') as f:
-            upload_resp = requests.post(
-                upload_url,
-                headers={"Authorization": f"Bearer {token}"},
-                files={"file": ("Orcamento_Alfagraf.pdf", f, "application/pdf")},
-                data={"messaging_product": "whatsapp"}
-            )
-
-        if upload_resp.status_code != 200:
-            return jsonify({"erro": "Falha no upload", "detalhe": upload_resp.text}), 500
-
-        media_id = upload_resp.json().get("id")
-        return jsonify({"sucesso": True, "media_id": media_id})
-
+        link = f"https://agente-alfagraf.onrender.com/pdf/{nome}"
+        return jsonify({"sucesso": True, "link": link})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
-    finally:
-        if os.path.exists(caminho):
-            os.unlink(caminho)
+
+@app.route("/pdf/<nome>", methods=["GET"])
+def servir_pdf(nome):
+    caminho = os.path.join(PDF_DIR, nome)
+    if not os.path.exists(caminho):
+        return jsonify({"erro": "Arquivo nao encontrado"}), 404
+    return send_file(caminho, mimetype="application/pdf",
+                     as_attachment=False,
+                     download_name="Orcamento_Alfagraf.pdf")
 
 @app.route("/health", methods=["GET"])
 def health():
