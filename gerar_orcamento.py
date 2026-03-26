@@ -8,16 +8,27 @@ from datetime import datetime
 import os
 
 PRECOS_M2 = {
-    1:  {"Vinil": 120,  "BOPP Branco": 140, "BOPP Metalizado": 150, "BOPP Transparente": 150},
-    2:  {"Vinil": 77,   "BOPP Branco": 100, "BOPP Metalizado": 120, "BOPP Transparente": 120},
-    3:  {"Vinil": 64,   "BOPP Branco": 85,  "BOPP Metalizado": 100, "BOPP Transparente": 100},
-    4:  {"Vinil": 60,   "BOPP Branco": 78,  "BOPP Metalizado": 92.5,"BOPP Transparente": 92.5},
-    5:  {"Vinil": 56,   "BOPP Branco": 75,  "BOPP Metalizado": 90,  "BOPP Transparente": 90},
-    6:  {"Vinil": 53,   "BOPP Branco": 72,  "BOPP Metalizado": 85,  "BOPP Transparente": 85},
-    7:  {"Vinil": 51,   "BOPP Branco": 66,  "BOPP Metalizado": 83,  "BOPP Transparente": 83},
-    8:  {"Vinil": 49,   "BOPP Branco": 63,  "BOPP Metalizado": 81,  "BOPP Transparente": 81},
-    9:  {"Vinil": 48,   "BOPP Branco": 60,  "BOPP Metalizado": 79,  "BOPP Transparente": 79},
-    10: {"Vinil": 47,   "BOPP Branco": 57,  "BOPP Metalizado": 76,  "BOPP Transparente": 76},
+    1:  {"Vinil": 120, "BOPP Branco": 140, "BOPP Metalizado": 150, "Etiqueta Patrimônio": 280, "Troca de Óleo Vinil Transparente": 200},
+    2:  {"Vinil": 77,  "BOPP Branco": 100, "BOPP Metalizado": 120, "Etiqueta Patrimônio": 240, "Troca de Óleo Vinil Transparente": 140},
+    3:  {"Vinil": 64,  "BOPP Branco": 85,  "BOPP Metalizado": 100, "Etiqueta Patrimônio": 220, "Troca de Óleo Vinil Transparente": 110},
+    4:  {"Vinil": 60,  "BOPP Branco": 78,  "BOPP Metalizado": 92.5,"Etiqueta Patrimônio": 210, "Troca de Óleo Vinil Transparente": 97.5},
+    5:  {"Vinil": 56,  "BOPP Branco": 75,  "BOPP Metalizado": 90,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    6:  {"Vinil": 53,  "BOPP Branco": 72,  "BOPP Metalizado": 85,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    7:  {"Vinil": 51,  "BOPP Branco": 66,  "BOPP Metalizado": 83,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    8:  {"Vinil": 49,  "BOPP Branco": 63,  "BOPP Metalizado": 81,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    9:  {"Vinil": 48,  "BOPP Branco": 60,  "BOPP Metalizado": 79,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    10: {"Vinil": 47,  "BOPP Branco": 57,  "BOPP Metalizado": 76,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+}
+
+# Chapa de PS: preço por faixa de 2 m² (chave = metros quadrados cobertos, sempre par)
+PRECOS_CHAPA_PS = {
+    2:  200,
+    4:  360,
+    6:  480,
+    8:  560,
+    10: 650,
+    12: 650,
+    14: 650,
 }
 
 ESTADOS_FRETE_FIXO = ["PR", "SP", "SC", "RS"]
@@ -35,7 +46,25 @@ def calcular_preco_m2(material, metros2):
         return None
     return tabela.get(material)
 
+def calcular_item_chapa_ps(largura_mm, altura_mm, quantidade):
+    """Chapa de PS: mínimo 2 m², incrementos de 2 em 2."""
+    import math
+    area_unitaria = (largura_mm / 1000) * (altura_mm / 1000)
+    area_total    = area_unitaria * quantidade
+    faixas     = max(1, math.ceil(area_total / 2))
+    m2_coberto = faixas * 2
+    preco_total = PRECOS_CHAPA_PS.get(min(m2_coberto, max(PRECOS_CHAPA_PS)))
+    if preco_total is None:
+        return None
+    return round(preco_total, 2), round(area_total, 4), m2_coberto
+
 def calcular_item(material, largura_mm, altura_mm, quantidade):
+    if material == "Chapa de PS 1mm":
+        resultado = calcular_item_chapa_ps(largura_mm, altura_mm, quantidade)
+        if resultado is None:
+            return None
+        valor_total, area_total, m2_coberto = resultado
+        return valor_total, area_total, f"preço fixo/{m2_coberto}m²"
     area_unitaria = (largura_mm / 1000) * (altura_mm / 1000)
     area_total    = area_unitaria * quantidade
     preco_m2      = calcular_preco_m2(material, area_total)
@@ -117,7 +146,7 @@ def gerar_pdf(dados, caminho_saida):
 
     for i, item in enumerate(dados["itens"], 1):
         material = item.get("material", "")
-        mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "BOPP Transparente"]
+        mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "Etiqueta Patrimônio", "Troca de Óleo Vinil Transparente", "Chapa de PS 1mm"]
 
         if material in mat_auto:
             resultado = calcular_item(material, item["largura_mm"], item["altura_mm"], item["quantidade"])
@@ -228,11 +257,17 @@ if __name__ == "__main__":
         "cliente": "Carlos Mendes", "empresa": "Distribuidora Mendes Ltda",
         "cidade": "Curitiba", "estado": "PR", "telefone": "41998887766",
         "itens": [
-            {"descricao": "Etiqueta BOPP Branco para rotulagem de produtos alimentícios",
+            {"descricao": "Etiqueta BOPP Branco para rotulagem",
              "material": "BOPP Branco", "largura_mm": 100, "altura_mm": 50, "quantidade": 500},
             {"descricao": "Adesivo Vinil externo",
              "material": "Vinil", "largura_mm": 200, "altura_mm": 150, "quantidade": 200},
+            {"descricao": "Etiqueta de Patrimônio em Poliéster",
+             "material": "Etiqueta Patrimônio", "largura_mm": 80, "altura_mm": 40, "quantidade": 300},
+            {"descricao": "Etiqueta Troca de Óleo Vinil Transparente",
+             "material": "Troca de Óleo Vinil Transparente", "largura_mm": 60, "altura_mm": 40, "quantidade": 100},
+            {"descricao": "Placa de Sinalização Chapa PS 1mm",
+             "material": "Chapa de PS 1mm", "largura_mm": 300, "altura_mm": 200, "quantidade": 15},
         ]
     }
     gerar_pdf(dados_teste, "/mnt/user-data/outputs/orcamento_teste_alfagraf.pdf")
-    print("OK")
+    print("PDF gerado com sucesso!")
