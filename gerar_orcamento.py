@@ -8,16 +8,16 @@ from datetime import datetime
 import os
 
 PRECOS_M2 = {
-    1:  {"Vinil": 120, "BOPP Branco": 140, "BOPP Metalizado": 150, "Etiqueta Patrimônio": 280, "Troca de Óleo Vinil Transparente": 200},
-    2:  {"Vinil": 77,  "BOPP Branco": 100, "BOPP Metalizado": 120, "Etiqueta Patrimônio": 240, "Troca de Óleo Vinil Transparente": 140},
-    3:  {"Vinil": 64,  "BOPP Branco": 85,  "BOPP Metalizado": 100, "Etiqueta Patrimônio": 220, "Troca de Óleo Vinil Transparente": 110},
-    4:  {"Vinil": 60,  "BOPP Branco": 78,  "BOPP Metalizado": 92.5,"Etiqueta Patrimônio": 210, "Troca de Óleo Vinil Transparente": 97.5},
-    5:  {"Vinil": 56,  "BOPP Branco": 75,  "BOPP Metalizado": 90,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
-    6:  {"Vinil": 53,  "BOPP Branco": 72,  "BOPP Metalizado": 85,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
-    7:  {"Vinil": 51,  "BOPP Branco": 66,  "BOPP Metalizado": 83,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
-    8:  {"Vinil": 49,  "BOPP Branco": 63,  "BOPP Metalizado": 81,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
-    9:  {"Vinil": 48,  "BOPP Branco": 60,  "BOPP Metalizado": 79,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
-    10: {"Vinil": 47,  "BOPP Branco": 57,  "BOPP Metalizado": 76,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    1:  {"Vinil": 120, "BOPP Branco": 140, "BOPP Metalizado": 150, "BOPP Transparente": 150, "Etiqueta Patrimônio": 280, "Troca de Óleo Vinil Transparente": 200},
+    2:  {"Vinil": 77,  "BOPP Branco": 100, "BOPP Metalizado": 120, "BOPP Transparente": 120, "Etiqueta Patrimônio": 240, "Troca de Óleo Vinil Transparente": 140},
+    3:  {"Vinil": 64,  "BOPP Branco": 85,  "BOPP Metalizado": 100, "BOPP Transparente": 100, "Etiqueta Patrimônio": 220, "Troca de Óleo Vinil Transparente": 110},
+    4:  {"Vinil": 60,  "BOPP Branco": 78,  "BOPP Metalizado": 92.5,"BOPP Transparente": 92.5,"Etiqueta Patrimônio": 210, "Troca de Óleo Vinil Transparente": 97.5},
+    5:  {"Vinil": 56,  "BOPP Branco": 75,  "BOPP Metalizado": 90,  "BOPP Transparente": 90,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    6:  {"Vinil": 53,  "BOPP Branco": 72,  "BOPP Metalizado": 85,  "BOPP Transparente": 85,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    7:  {"Vinil": 51,  "BOPP Branco": 66,  "BOPP Metalizado": 83,  "BOPP Transparente": 83,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    8:  {"Vinil": 49,  "BOPP Branco": 63,  "BOPP Metalizado": 81,  "BOPP Transparente": 81,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    9:  {"Vinil": 48,  "BOPP Branco": 60,  "BOPP Metalizado": 79,  "BOPP Transparente": 79,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
+    10: {"Vinil": 47,  "BOPP Branco": 57,  "BOPP Metalizado": 76,  "BOPP Transparente": 76,  "Etiqueta Patrimônio": 200, "Troca de Óleo Vinil Transparente": 90},
 }
 
 # Chapa de PS: preço por faixa de 2 m² (chave = metros quadrados cobertos, sempre par)
@@ -34,9 +34,10 @@ PRECOS_CHAPA_PS = {
 ESTADOS_FRETE_FIXO = ["PR", "SP", "SC", "RS"]
 VALOR_FRETE = 50.0
 
-AZUL_ALFAGRAF = colors.HexColor("#1a237e")
-AZUL_CLARO    = colors.HexColor("#e8eaf6")
-CINZA_LINHA   = colors.HexColor("#eeeeee")
+AZUL_CLICKECOLA  = colors.HexColor("#1a4fb5")
+LARANJA_CLICKECOLA = colors.HexColor("#f5a000")
+AZUL_CLARO       = colors.HexColor("#e8f0fb")
+CINZA_LINHA      = colors.HexColor("#eeeeee")
 
 def calcular_preco_m2(material, metros2):
     import math
@@ -82,9 +83,9 @@ def gerar_pdf(dados, caminho_saida):
 
     styles = getSampleStyleSheet()
 
-    estilo_titulo = ParagraphStyle("titulo", fontSize=18, textColor=AZUL_ALFAGRAF,
+    estilo_titulo = ParagraphStyle("titulo", fontSize=18, textColor=AZUL_CLICKECOLA,
         fontName="Helvetica-Bold", spaceAfter=2)
-    h1 = ParagraphStyle("h1", fontSize=10, textColor=AZUL_ALFAGRAF,
+    h1 = ParagraphStyle("h1", fontSize=10, textColor=AZUL_CLICKECOLA,
         fontName="Helvetica-Bold", spaceBefore=6, spaceAfter=4)
     normal = ParagraphStyle("normal", fontSize=9, textColor=colors.black,
         fontName="Helvetica", spaceAfter=2)
@@ -98,22 +99,35 @@ def gerar_pdf(dados, caminho_saida):
     story = []
 
     # CABEÇALHO
-    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_alfagraf.png")
-    logo = Image(logo_path, width=45*mm, height=18*mm)
+    # Logo: proporção original 1280x376 = 3.4:1
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Logo_Click_e_Cola.jpeg")
+    logo_w = 70*mm
+    logo_h = logo_w / 3.4
+    logo = Image(logo_path, width=logo_w, height=logo_h)
     numero_orcamento = datetime.now().strftime("%Y%m%d%H%M")
     data_formatada   = datetime.now().strftime("%d/%m/%Y")
 
-    cabecalho_dados = [[logo,
-        Paragraph(f"<b>ORÇAMENTO Nº {numero_orcamento}</b>", estilo_titulo),
-        Paragraph(f"Data: {data_formatada}", normal)]]
-    tabela_cab = Table(cabecalho_dados, colWidths=[50*mm, 100*mm, 35*mm])
+    estilo_orcamento = ParagraphStyle("orcamento", fontSize=11, textColor=AZUL_CLICKECOLA,
+        fontName="Helvetica-Bold", spaceAfter=0)
+    estilo_data = ParagraphStyle("data", fontSize=9, textColor=colors.black,
+        fontName="Helvetica", alignment=TA_CENTER)
+
+    cabecalho_dados = [[
+        logo,
+        Paragraph(f"ORÇAMENTO Nº<br/>{numero_orcamento}", estilo_orcamento),
+        Paragraph(f"Data: {data_formatada}", estilo_data),
+    ]]
+    tabela_cab = Table(cabecalho_dados, colWidths=[72*mm, 80*mm, 36*mm])
     tabela_cab.setStyle(TableStyle([
         ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("ALIGN",  (1,0), (1,0),  "LEFT"),
         ("ALIGN",  (2,0), (2,0),  "RIGHT"),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+        ("TOPPADDING",    (0,0), (-1,-1), 4),
     ]))
     story.append(tabela_cab)
-    story.append(HRFlowable(width="100%", thickness=2, color=AZUL_ALFAGRAF, spaceAfter=6))
+    story.append(HRFlowable(width="100%", thickness=2, color=LARANJA_CLICKECOLA, spaceAfter=2))
+    story.append(HRFlowable(width="100%", thickness=1, color=AZUL_CLICKECOLA, spaceAfter=6))
 
     # DADOS DO CLIENTE
     story.append(Paragraph("DADOS DO CLIENTE", h1))
@@ -146,7 +160,7 @@ def gerar_pdf(dados, caminho_saida):
 
     for i, item in enumerate(dados["itens"], 1):
         material = item.get("material", "")
-        mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "Etiqueta Patrimônio", "Troca de Óleo Vinil Transparente", "Chapa de PS 1mm"]
+        mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "BOPP Transparente", "Etiqueta Patrimônio", "Troca de Óleo Vinil Transparente", "Chapa de PS 1mm"]
 
         if material in mat_auto:
             resultado = calcular_item(material, item["largura_mm"], item["altura_mm"], item["quantidade"])
@@ -177,7 +191,7 @@ def gerar_pdf(dados, caminho_saida):
     col_widths = [8*mm, 58*mm, 35*mm, 28*mm, 14*mm, 33*mm]
     tab_itens = Table(linhas, colWidths=col_widths, repeatRows=1)
     tab_itens.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,0),  AZUL_ALFAGRAF),
+        ("BACKGROUND",    (0,0), (-1,0),  AZUL_CLICKECOLA),
         ("TEXTCOLOR",     (0,0), (-1,0),  colors.white),
         ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0,0), (-1,-1), 8),
@@ -220,9 +234,9 @@ def gerar_pdf(dados, caminho_saida):
         if subtotal > 0:
             estilo_totais += [
                 ("FONTNAME",  (1,ultima), (-1,ultima), "Helvetica-Bold"),
-                ("TEXTCOLOR", (1,ultima), (-1,ultima), AZUL_ALFAGRAF),
+                ("TEXTCOLOR", (1,ultima), (-1,ultima), AZUL_CLICKECOLA),
                 ("FONTSIZE",  (1,ultima), (-1,ultima), 10),
-                ("LINEABOVE", (1,ultima), (-1,ultima), 1, AZUL_ALFAGRAF),
+                ("LINEABOVE", (1,ultima), (-1,ultima), 1, LARANJA_CLICKECOLA),
             ]
         tab_totais.setStyle(TableStyle(estilo_totais))
         story.append(tab_totais)
@@ -245,9 +259,10 @@ def gerar_pdf(dados, caminho_saida):
         story.append(Paragraph(o, obs))
 
     story.append(Spacer(1, 6*mm))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc"), spaceAfter=4))
+    story.append(HRFlowable(width="100%", thickness=1, color=LARANJA_CLICKECOLA, spaceAfter=2))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=AZUL_CLICKECOLA, spaceAfter=4))
     story.append(Paragraph(
-        "Alfagraf — R. Dep. João Ribeiro Júnior, 220 - Cidade Industrial de Curitiba, Curitiba - PR, 81350-220  |  (41) 3014-4002  |  comercial@alfagraf.com.br",
+        "Click e Cola Soluções Gráficas — R. Dep. João Ribeiro Júnior, 220 - Cidade Industrial de Curitiba, Curitiba - PR, 81350-220  |  (41) 3014-4002  |  comercial@alfagraf.com.br",
         rodape))
 
     doc.build(story)
@@ -269,5 +284,5 @@ if __name__ == "__main__":
              "material": "Chapa de PS 1mm", "largura_mm": 300, "altura_mm": 200, "quantidade": 15},
         ]
     }
-    gerar_pdf(dados_teste, "/mnt/user-data/outputs/orcamento_teste_alfagraf.pdf")
+    gerar_pdf(dados_teste, "/mnt/user-data/outputs/orcamento_teste_clickecola.pdf")
     print("PDF gerado com sucesso!")
