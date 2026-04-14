@@ -7,6 +7,16 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from datetime import datetime
 import os
 
+MATERIAIS_VALIDOS = [
+    "Vinil",
+    "BOPP Branco",
+    "BOPP Metalizado",
+    "BOPP Transparente",
+    "Etiqueta Patrimônio",
+    "Troca de Óleo Vinil Transparente",
+    "Chapa de PS 1mm",
+]
+
 PRECOS_M2 = {
     1:  {"Vinil": 120, "BOPP Branco": 140, "BOPP Metalizado": 150, "BOPP Transparente": 150, "Etiqueta Patrimônio": 280, "Troca de Óleo Vinil Transparente": 200},
     2:  {"Vinil": 77,  "BOPP Branco": 100, "BOPP Metalizado": 120, "BOPP Transparente": 120, "Etiqueta Patrimônio": 240, "Troca de Óleo Vinil Transparente": 140},
@@ -41,11 +51,14 @@ CINZA_LINHA      = colors.HexColor("#eeeeee")
 
 def calcular_preco_m2(material, metros2):
     import math
-    m2_int = min(10, max(1, math.ceil(metros2)))
+    # Mínimo de 1 m² cobrado — mesmo que a área real seja menor
+    area_cobrada = max(1.0, metros2)
+    m2_int = min(10, max(1, math.ceil(area_cobrada)))
     tabela = PRECOS_M2.get(m2_int)
     if not tabela:
-        return None
-    return tabela.get(material)
+        return None, None
+    preco = tabela.get(material)
+    return preco, area_cobrada
 
 def calcular_item_chapa_ps(largura_mm, altura_mm, quantidade):
     """Chapa de PS: mínimo 2 m², incrementos de 2 em 2."""
@@ -60,20 +73,35 @@ def calcular_item_chapa_ps(largura_mm, altura_mm, quantidade):
     return round(preco_total, 2), round(area_total, 4), m2_coberto
 
 def calcular_item(material, largura_mm, altura_mm, quantidade):
+    # Trava de segurança — material não reconhecido lança exceção
+    if material not in MATERIAIS_VALIDOS:
+        raise ValueError(f"Material '{material}' não disponível para orçamento automático. Encaminhar para atendente humano.")
+
     if material == "Chapa de PS 1mm":
         resultado = calcular_item_chapa_ps(largura_mm, altura_mm, quantidade)
         if resultado is None:
             return None
         valor_total, area_total, m2_coberto = resultado
         return valor_total, area_total, f"preço fixo/{m2_coberto}m²"
+
     area_unitaria = (largura_mm / 1000) * (altura_mm / 1000)
     area_total    = area_unitaria * quantidade
-    preco_m2      = calcular_preco_m2(material, area_total)
+
+    preco_m2, area_cobrada = calcular_preco_m2(material, area_total)
     if preco_m2 is None:
         return None
-    return round(area_total * preco_m2, 2), round(area_total, 4), preco_m2
+
+    # Cobra pela área mínima de 1 m² se a área real for menor
+    valor_total = round(area_cobrada * preco_m2, 2)
+    return valor_total, round(area_total, 4), preco_m2
 
 def gerar_pdf(dados, caminho_saida):
+    # Valida todos os materiais antes de gerar o PDF
+    for item in dados.get("itens", []):
+        material = item.get("material", "")
+        if material not in MATERIAIS_VALIDOS:
+            raise ValueError(f"Material '{material}' não disponível para orçamento automático. Encaminhar para atendente humano.")
+
     doc = SimpleDocTemplate(
         caminho_saida,
         pagesize=A4,
@@ -99,7 +127,6 @@ def gerar_pdf(dados, caminho_saida):
     story = []
 
     # CABEÇALHO
-    # Logo: proporção original 1280x376 = 3.4:1
     logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Logo_Click_e_Cola.jpeg")
     logo_w = 70*mm
     logo_h = logo_w / 3.4
@@ -155,38 +182,22 @@ def gerar_pdf(dados, caminho_saida):
     cabecalho_itens = ["#", "Descrição", "Material", "Tamanho", "Qtd", "Total (R$)"]
     linhas = [cabecalho_itens]
 
-    subtotal     = 0.0
-    itens_humano = []
+    subtotal = 0.0
 
     for i, item in enumerate(dados["itens"], 1):
         material = item.get("material", "")
-        mat_auto = ["Vinil", "BOPP Branco", "BOPP Metalizado", "BOPP Transparente", "Etiqueta Patrimônio", "Troca de Óleo Vinil Transparente", "Chapa de PS 1mm"]
-
-        if material in mat_auto:
-            resultado = calcular_item(material, item["largura_mm"], item["altura_mm"], item["quantidade"])
-            if resultado:
-                valor_total, area_total, preco_m2 = resultado
-                subtotal += valor_total
-                linhas.append([
-                    str(i),
-                    Paragraph(item.get("descricao", material), celula),
-                    Paragraph(material, celula),
-                    f"{item['largura_mm']}x{item['altura_mm']} mm",
-                    str(item["quantidade"]),
-                    f"R$ {valor_total:.2f}",
-                ])
-            else:
-                itens_humano.append(i)
-                linhas.append([str(i), Paragraph(item.get("descricao", material), celula),
-                    Paragraph(material, celula),
-                    f"{item['largura_mm']}x{item['altura_mm']} mm",
-                    str(item["quantidade"]), "A consultar"])
-        else:
-            itens_humano.append(i)
-            linhas.append([str(i), Paragraph(item.get("descricao", material), celula),
+        resultado = calcular_item(material, item["largura_mm"], item["altura_mm"], item["quantidade"])
+        if resultado:
+            valor_total, area_total, preco_m2 = resultado
+            subtotal += valor_total
+            linhas.append([
+                str(i),
+                Paragraph(item.get("descricao", material), celula),
                 Paragraph(material, celula),
-                f"{item.get('largura_mm','-')}x{item.get('altura_mm','-')} mm",
-                str(item.get("quantidade","-")), "A consultar"])
+                f"{item['largura_mm']}x{item['altura_mm']} mm",
+                str(item["quantidade"]),
+                f"R$ {valor_total:.2f}",
+            ])
 
     col_widths = [8*mm, 58*mm, 35*mm, 28*mm, 14*mm, 33*mm]
     tab_itens = Table(linhas, colWidths=col_widths, repeatRows=1)
@@ -249,9 +260,6 @@ def gerar_pdf(dados, caminho_saida):
         "• Aceitamos cartão de crédito.",
         "• Esta é uma proposta preliminar elaborada com base nas informações fornecidas. Após a aprovação, realizaremos as confirmações técnicas necessárias para garantir a melhor solução para o seu projeto.",
     ]
-    if itens_humano:
-        nums = ", ".join(str(n) for n in itens_humano)
-        obs_linhas.append(f"• Os itens {nums} marcados como 'A consultar' serão orçados manualmente pela equipe comercial.")
     if frete is None and estado:
         obs_linhas.append("• Frete para o seu estado será calculado pela equipe comercial.")
 
@@ -284,5 +292,5 @@ if __name__ == "__main__":
              "material": "Chapa de PS 1mm", "largura_mm": 300, "altura_mm": 200, "quantidade": 15},
         ]
     }
-    gerar_pdf(dados_teste, "/mnt/user-data/outputs/orcamento_teste_clickecola.pdf")
+    gerar_pdf(dados_teste, "/tmp/orcamento_teste.pdf")
     print("PDF gerado com sucesso!")
